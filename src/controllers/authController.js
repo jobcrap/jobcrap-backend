@@ -11,9 +11,9 @@ const config = require('../config');
 exports.register = asyncHandler(async (req, res, next) => {
     const { email, password, username, role } = req.body;
 
-    // Allow setting admin role only in development/test or if specific secret is provided
-    // For production, prevent role manipulation
-    const finalRole = (config.nodeEnv === 'development' && role) ? role : 'user';
+    // For local registration, always default to 'user'. 
+    // Promotions to admin should be done manually in the database.
+    const finalRole = 'user';
 
     const user = await userService.createUser({
         email,
