@@ -17,7 +17,9 @@ connectDB();
 // Middleware
 app.use(helmet()); // Security headers
 app.use(cors({
-    origin: [config.frontendUrl, 'http://localhost:5173', 'http://localhost:3000'],
+    origin: [config.frontendUrl, 'https://www.jobcrap.com',
+        'https://jobcrap.com',],
+
     credentials: true
 }));
 
