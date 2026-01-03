@@ -8,8 +8,6 @@ const config = {
     // Database
     mongoUri: process.env.MONGODB_URI || 'mongodb://localhost:27017/story-app',
 
-
-
     // CORS
     frontendUrl: process.env.FRONTEND_URL || 'http://localhost:5173',
 
@@ -18,10 +16,7 @@ const config = {
 
     // Rate Limiting
     rateLimitWindow: parseInt(process.env.RATE_LIMIT_WINDOW_MS) || 15 * 60 * 1000, // 15 minutes,
-    rateLimitMax: parseInt(process.env.RATE_LIMIT_MAX_REQUESTS) || 100,
-
-    // Admin
-    adminEmail: process.env.ADMIN_EMAIL || 'admin@storyapp.com'
+    rateLimitMax: parseInt(process.env.RATE_LIMIT_MAX_REQUESTS) || 100
 };
 
 // Validate required environment variables
