@@ -1,10 +1,10 @@
 // Application Constants
 
 const STORY_CATEGORIES = [
-  'dark', 'funny', 'scary', 'heartbreaking', 'heartwarming', 'absurd', 'unbelievable', 'other'
+  'dark', 'funny', 'scary', 'heartbreaking', 'heartwarming', 'absurd', 'unbelievable', 'disgusting', 'spicy', 'other'
 ];
 
-const TRIGGER_WARNINGS = ['violence', 'trauma', 'nudity', 'mental_health'];
+const TRIGGER_WARNINGS = ['violence', 'trauma', 'nudity', 'mental_health', 'discrimination', 'substance_abuse'];
 
 const USER_ROLES = {
   USER: 'user',
@@ -36,7 +36,7 @@ const PAGINATION = {
 };
 
 const LIMITS = {
-  STORY_TEXT_MIN: 10,
+  STORY_TEXT_MIN: 1,
   STORY_TEXT_MAX: 700,
   STORY_SENTENCES_MAX: 7,
   COMMENT_TEXT_MAX: 500,
