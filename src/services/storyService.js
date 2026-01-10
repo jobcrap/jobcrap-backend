@@ -77,12 +77,7 @@ exports.getStoryById = async (id) => {
         throw new Error('Story not found');
     }
 
-    const storyObj = story.toObject();
-    if (storyObj.isAnonymous) {
-        storyObj.author = { _id: storyObj.author?._id, username: 'Anonymous' };
-    }
-
-    return storyObj;
+    return story;
 };
 
 /**
@@ -96,12 +91,7 @@ exports.getStoryByShareId = async (shareId) => {
         throw new Error('Story not found');
     }
 
-    const storyObj = story.toObject();
-    if (storyObj.isAnonymous) {
-        storyObj.author = { _id: storyObj.author?._id, username: 'Anonymous' };
-    }
-
-    return storyObj;
+    return story;
 };
 
 /**

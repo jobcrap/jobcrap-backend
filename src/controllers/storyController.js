@@ -54,6 +54,12 @@ exports.getStoryById = asyncHandler(async (req, res) => {
 
     // story is a Mongoose document here
     const storyObj = story.toObject();
+
+    // Mask author details if anonymous
+    if (storyObj.isAnonymous) {
+        storyObj.author = { _id: storyObj.author?._id, username: 'Anonymous' };
+    }
+
     storyObj.userVote = userVote;
 
     successResponse(res, storyObj);
@@ -66,7 +72,14 @@ exports.getStoryById = asyncHandler(async (req, res) => {
  */
 exports.getStoryByShareId = asyncHandler(async (req, res) => {
     const story = await storyService.getStoryByShareId(req.params.shareId);
-    successResponse(res, story);
+    const storyObj = story.toObject();
+
+    // Mask author details if anonymous
+    if (storyObj.isAnonymous) {
+        storyObj.author = { _id: storyObj.author?._id, username: 'Anonymous' };
+    }
+
+    successResponse(res, storyObj);
 });
 
 /**
@@ -122,7 +135,12 @@ exports.updateStory = asyncHandler(async (req, res) => {
     Object.assign(story, updates);
     await story.save();
 
-    successResponse(res, story, 'Story updated successfully');
+    const storyObj = story.toObject();
+    if (storyObj.isAnonymous) {
+        storyObj.author = { _id: storyObj.author?._id, username: 'Anonymous' };
+    }
+
+    successResponse(res, storyObj, 'Story updated successfully');
 });
 
 /**
