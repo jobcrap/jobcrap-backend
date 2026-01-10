@@ -101,7 +101,7 @@ exports.updateStory = asyncHandler(async (req, res) => {
     }
 
     // Only allow updating certain fields
-    const allowedUpdates = ['profession', 'country', 'category', 'text', 'triggerWarnings'];
+    const allowedUpdates = ['profession', 'country', 'category', 'text', 'triggerWarnings', 'isAnonymous'];
     const updates = {};
 
     allowedUpdates.forEach(field => {

@@ -41,13 +41,24 @@ exports.getStories = async (filters, page, limit, sort = '-createdAt') => {
         // controversial: posts with high activity (up + down)
         sortOption = { upvotes: -1, downvotes: -1 };
     }
-    const stories = await Story.find(query)
+    let stories = await Story.find(query)
         .sort(sortOption)
         .skip((page - 1) * limit)
         .limit(limit)
-        .populate('author', 'username _id') // Don't expose sensitive fields
-        .populate('commentsCount') // Populate virtual comments count
-        .lean({ virtuals: true }); // Enable virtuals in lean results
+        .populate('author', 'username _id avatar') // Populating avatar as well
+        .populate('commentsCount')
+        .lean({ virtuals: true });
+
+    // Handle anonymity: Hide author details if isAnonymous is true
+    stories = stories.map(story => {
+        if (story.isAnonymous) {
+            return {
+                ...story,
+                author: { _id: story.author?._id, username: 'Anonymous' } // Keep only ID for internal logic, hide username/avatar
+            };
+        }
+        return story;
+    });
 
     return {
         stories,
@@ -60,13 +71,18 @@ exports.getStories = async (filters, page, limit, sort = '-createdAt') => {
  */
 exports.getStoryById = async (id) => {
     const story = await Story.findOne({ _id: id, isDeleted: false })
-        .populate('author', 'username _id');
+        .populate('author', 'username _id avatar');
 
     if (!story) {
         throw new Error('Story not found');
     }
 
-    return story;
+    const storyObj = story.toObject();
+    if (storyObj.isAnonymous) {
+        storyObj.author = { _id: storyObj.author?._id, username: 'Anonymous' };
+    }
+
+    return storyObj;
 };
 
 /**
@@ -74,13 +90,18 @@ exports.getStoryById = async (id) => {
  */
 exports.getStoryByShareId = async (shareId) => {
     const story = await Story.findOne({ shareId, isDeleted: false })
-        .populate('author', 'username _id');
+        .populate('author', 'username _id avatar');
 
     if (!story) {
         throw new Error('Story not found');
     }
 
-    return story;
+    const storyObj = story.toObject();
+    if (storyObj.isAnonymous) {
+        storyObj.author = { _id: storyObj.author?._id, username: 'Anonymous' };
+    }
+
+    return storyObj;
 };
 
 /**

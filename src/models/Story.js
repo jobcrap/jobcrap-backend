@@ -72,6 +72,11 @@ const storySchema = new mongoose.Schema({
         type: String,
         unique: true,
         index: true
+    },
+    isAnonymous: {
+        type: Boolean,
+        default: false,
+        index: true
     }
 }, {
     timestamps: true,
