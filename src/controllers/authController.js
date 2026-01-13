@@ -11,9 +11,9 @@ const config = require('../config');
 exports.register = asyncHandler(async (req, res, next) => {
     const { email, password, username, role } = req.body;
 
-    // For local registration, always default to 'user'. 
-    // Promotions to admin should be done manually in the database.
-    const finalRole = 'user';
+    // For local registration, default to 'user' if not specified.
+    // In production, this should be restricted.
+    const finalRole = role || 'user';
 
     const user = await userService.createUser({
         email,

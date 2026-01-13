@@ -15,12 +15,32 @@ const app = express();
 connectDB();
 
 // Middleware
-app.use(helmet()); // Security headers
-app.use(cors({
-    origin: [config.frontendUrl, 'https://www.jobcrap.com',
-        'https://jobcrap.com',],
+// Middleware
+app.use(helmet({
+    crossOriginResourcePolicy: { policy: "cross-origin" }
+})); // Security headers
 
-    credentials: true
+const allowedOrigins = [
+    config.frontendUrl,
+    'https://www.jobcrap.com',
+    'https://jobcrap.com'
+];
+
+app.use(cors({
+    origin: function (origin, callback) {
+        // Allow requests with no origin (like mobile apps or curl requests)
+        if (!origin) return callback(null, true);
+
+        if (allowedOrigins.includes(origin) || origin.includes('localhost') || origin.includes('127.0.0.1')) {
+            callback(null, true);
+        } else {
+            console.log('Origin not allowed by CORS:', origin);
+            callback(new Error('Not allowed by CORS'));
+        }
+    },
+    credentials: true,
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH'],
+    allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Accept']
 }));
 
 app.get('/', (req, res) => {
