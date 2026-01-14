@@ -1,4 +1,4 @@
-const { Comment, Story } = require('../models');
+const { Comment, Story, Vote } = require('../models');
 const { successResponse, errorResponse } = require('../utils/responseHandler');
 const asyncHandler = require('../utils/asyncHandler');
 const { getPaginationData } = require('../utils/pagination');
@@ -38,13 +38,34 @@ exports.addComment = asyncHandler(async (req, res) => {
 exports.getComments = asyncHandler(async (req, res) => {
     const { page, limit } = req.query;
     const storyId = req.params.id;
+    const userId = req.user?._id;
 
     const total = await Comment.countDocuments({ story: storyId });
-    const comments = await Comment.find({ story: storyId })
+    let comments = await Comment.find({ story: storyId })
         .sort({ upvotes: -1, createdAt: -1 })
         .skip(((page || 1) - 1) * (limit || 20))
-        .limit(limit || 20)
-        .populate('author', 'username _id avatar');
+        .limit(parseInt(limit || 20))
+        .populate('author', 'username _id avatar')
+        .lean();
+
+    // Attach userVote if logged in
+    if (userId) {
+        const commentIds = comments.map(c => c._id);
+        const userVotes = await Vote.find({
+            user: userId,
+            comment: { $in: commentIds }
+        });
+
+        const voteMap = userVotes.reduce((acc, vote) => {
+            acc[vote.comment.toString()] = vote.voteType;
+            return acc;
+        }, {});
+
+        comments = comments.map(comment => ({
+            ...comment,
+            userVote: voteMap[comment._id.toString()] || null
+        }));
+    }
 
     successResponse(res, {
         comments,

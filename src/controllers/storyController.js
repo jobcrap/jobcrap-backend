@@ -30,10 +30,10 @@ exports.createStory = asyncHandler(async (req, res) => {
  * @access  Public
  */
 exports.getAllStories = asyncHandler(async (req, res) => {
-    const { page, limit, sort, country, category, author } = req.query;
-    const filters = { country, category, author };
+    const { page, limit, sort, country, category, author, tag, search } = req.query;
+    const filters = { country, category, author, tag, search };
 
-    const result = await storyService.getStories(filters, page, limit, sort);
+    const result = await storyService.getStories(filters, page, limit, sort, req.user?._id);
 
     successResponse(res, result);
 });
@@ -44,25 +44,9 @@ exports.getAllStories = asyncHandler(async (req, res) => {
  * @access  Public
  */
 exports.getStoryById = asyncHandler(async (req, res) => {
-    const story = await storyService.getStoryById(req.params.id);
+    const story = await storyService.getStoryById(req.params.id, req.user?._id);
 
-    // If user is logged in, attach their vote
-    let userVote = null;
-    if (req.user) {
-        userVote = await voteService.getUserVote(story._id, req.user._id);
-    }
-
-    // story is a Mongoose document here
-    const storyObj = story.toObject();
-
-    // Mask author details if anonymous
-    if (storyObj.isAnonymous) {
-        storyObj.author = { _id: storyObj.author?._id, username: 'Anonymous' };
-    }
-
-    storyObj.userVote = userVote;
-
-    successResponse(res, storyObj);
+    successResponse(res, story);
 });
 
 /**
@@ -71,15 +55,9 @@ exports.getStoryById = asyncHandler(async (req, res) => {
  * @access  Public
  */
 exports.getStoryByShareId = asyncHandler(async (req, res) => {
-    const story = await storyService.getStoryByShareId(req.params.shareId);
-    const storyObj = story.toObject();
+    const story = await storyService.getStoryByShareId(req.params.shareId, req.user?._id);
 
-    // Mask author details if anonymous
-    if (storyObj.isAnonymous) {
-        storyObj.author = { _id: storyObj.author?._id, username: 'Anonymous' };
-    }
-
-    successResponse(res, storyObj);
+    successResponse(res, story);
 });
 
 /**
@@ -153,7 +131,7 @@ exports.getMyStories = asyncHandler(async (req, res) => {
 
     console.log('Fetching My Stories. User ID:', req.user?._id);
 
-    const stories = await Story.find({
+    let stories = await Story.find({
         author: req.user._id,
         isDeleted: false
     })
@@ -163,6 +141,23 @@ exports.getMyStories = asyncHandler(async (req, res) => {
         .skip((page - 1) * limit)
         .limit(parseInt(limit))
         .lean({ virtuals: true });
+
+    // Attach userVote (user always votes on their own stories usually, but let's be consistent)
+    const storyIds = stories.map(s => s._id);
+    const userVotes = await Vote.find({
+        user: req.user._id,
+        story: { $in: storyIds }
+    });
+
+    const voteMap = userVotes.reduce((acc, vote) => {
+        acc[vote.story.toString()] = vote.voteType;
+        return acc;
+    }, {});
+
+    stories = stories.map(story => ({
+        ...story,
+        userVote: voteMap[story._id.toString()] || null
+    }));
 
     const total = await Story.countDocuments({
         author: req.user._id,

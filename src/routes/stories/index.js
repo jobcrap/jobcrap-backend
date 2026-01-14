@@ -10,12 +10,12 @@ const { createStoryLimiter } = require('../../middleware/rateLimitMiddleware');
 // Story Routes
 router.route('/')
     .post(authenticate, createStoryLimiter, validateStory, storyController.createStory)
-    .get(storyController.getAllStories);
+    .get(optionalAuth, storyController.getAllStories);
 
 // My Stories Route
 router.get('/my-stories', authenticate, storyController.getMyStories);
 
-router.get('/share/:shareId', storyController.getStoryByShareId);
+router.get('/share/:shareId', optionalAuth, storyController.getStoryByShareId);
 
 router.route('/:id')
     .get(optionalAuth, storyController.getStoryById)
@@ -31,7 +31,7 @@ router.route('/:id/votes')
 
 router.route('/:id/comments')
     .post(authenticate, validateComment, commentController.addComment)
-    .get(commentController.getComments);
+    .get(optionalAuth, commentController.getComments);
 
 // Report Route
 const reportController = require('../../controllers/reportController');

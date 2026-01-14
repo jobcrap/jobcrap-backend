@@ -77,6 +77,15 @@ const storySchema = new mongoose.Schema({
         type: Boolean,
         default: false,
         index: true
+    },
+    tags: [{
+        type: String,
+        trim: true
+    }],
+    commentCount: {
+        type: Number,
+        default: 0,
+        index: true
     }
 }, {
     timestamps: true,
@@ -87,6 +96,8 @@ const storySchema = new mongoose.Schema({
 // Indexes
 storySchema.index({ country: 1, category: 1 });
 storySchema.index({ createdAt: -1 });
+storySchema.index({ upvotes: -1, commentCount: -1 }); // Index for trending/discussed
+storySchema.index({ tags: 1 }); // Index for tag filtering
 
 // Virtual for net votes
 storySchema.virtual('netVotes').get(function () {

@@ -1,4 +1,4 @@
-const { Story, Vote, Comment } = require('../models');
+const { Story, Vote, Comment, User } = require('../models');
 const { getPaginationData } = require('../utils/pagination');
 const translationService = require('./translationService');
 
@@ -12,8 +12,15 @@ exports.createStory = async (storyData, userId) => {
         originalLanguage = await translationService.detectLanguage(storyData.text);
     }
 
+    // Clean tags if any
+    let tags = storyData.tags || [];
+    if (typeof tags === 'string') {
+        tags = tags.split(',').map(tag => tag.trim()).filter(tag => tag.length > 0);
+    }
+
     const story = await Story.create({
         ...storyData,
+        tags,
         originalLanguage: originalLanguage || 'en',
         author: userId
     });
@@ -23,29 +30,50 @@ exports.createStory = async (storyData, userId) => {
 /**
  * Get stories with filters and pagination
  */
-exports.getStories = async (filters, page, limit, sort = '-createdAt') => {
+exports.getStories = async (filters, page, limit, sort = '-createdAt', currentUserId = null) => {
     const query = {
-        isDeleted: false, // Keep existing filter for non-deleted stories
-        status: { $in: ['approved', 'flagged'] }, // Show both approved and flagged posts
+        isDeleted: false,
+        status: { $in: ['approved', 'flagged'] },
         ...(filters.country && { country: filters.country }),
         ...(filters.category && { category: filters.category }),
-        ...(filters.author && { author: filters.author })
+        ...(filters.author && { author: filters.author }),
+        ...(filters.tag && { tags: filters.tag }), // Filter by tag
     };
+
+    // Simplified Search Logic (Text and Tags only)
+    if (filters.search) {
+        const searchRegex = { $regex: filters.search, $options: 'i' };
+
+        query.$or = [
+            { text: searchRegex },
+            { tags: searchRegex }
+        ];
+    }
     const total = await Story.countDocuments(query);
 
     // Create sort object
-    let sortOption = { createdAt: -1 }; // Default new
+    let sortOption = { createdAt: -1 }; // Default: Latest
     if (sort === '-upvotes') {
-        sortOption = { upvotes: -1 };
+        // Top Rated: Most likes, then most comments, then newest
+        sortOption = { upvotes: -1, commentCount: -1, createdAt: -1 };
+    } else if (sort === 'trending') {
+        // Trending: Combination of votes and comments, then newest
+        // This ensures posts with high engagement across both metrics appear first
+        sortOption = { upvotes: -1, commentCount: -1, createdAt: -1 };
+    } else if (sort === 'discussed') {
+        // Most Discussed: Most comments, then most likes, then newest
+        sortOption = { commentCount: -1, upvotes: -1, createdAt: -1 };
     } else if (sort === 'controversial') {
-        // controversial: posts with high activity (up + down)
-        sortOption = { upvotes: -1, downvotes: -1 };
+        // Controversial: High engagement on both sides (high up + high down)
+        // For simplicity and performance, we'll sort by downvotes then upvotes
+        sortOption = { downvotes: -1, upvotes: -1, createdAt: -1 };
     }
+
     let stories = await Story.find(query)
         .sort(sortOption)
         .skip((page - 1) * limit)
         .limit(limit)
-        .populate('author', 'username _id avatar') // Populating avatar as well
+        .populate('author', 'username _id avatar')
         .populate('commentsCount')
         .lean({ virtuals: true });
 
@@ -60,6 +88,25 @@ exports.getStories = async (filters, page, limit, sort = '-createdAt') => {
         return story;
     });
 
+    // Add userVote if currentUserId is provided
+    if (currentUserId) {
+        const storyIds = stories.map(s => s._id);
+        const userVotes = await Vote.find({
+            user: currentUserId,
+            story: { $in: storyIds }
+        });
+
+        const voteMap = userVotes.reduce((acc, vote) => {
+            acc[vote.story.toString()] = vote.voteType;
+            return acc;
+        }, {});
+
+        stories = stories.map(story => ({
+            ...story,
+            userVote: voteMap[story._id.toString()] || null
+        }));
+    }
+
     return {
         stories,
         pagination: getPaginationData(page, limit, total)
@@ -69,7 +116,7 @@ exports.getStories = async (filters, page, limit, sort = '-createdAt') => {
 /**
  * Get single story by ID
  */
-exports.getStoryById = async (id) => {
+exports.getStoryById = async (id, currentUserId = null) => {
     const story = await Story.findOne({ _id: id, isDeleted: false })
         .populate('author', 'username _id avatar');
 
@@ -77,13 +124,25 @@ exports.getStoryById = async (id) => {
         throw new Error('Story not found');
     }
 
-    return story;
+    const storyObj = story.toObject();
+
+    // Mask author details if anonymous
+    if (storyObj.isAnonymous) {
+        storyObj.author = { _id: storyObj.author?._id, username: 'Anonymous' };
+    }
+
+    if (currentUserId) {
+        const vote = await Vote.findOne({ story: id, user: currentUserId });
+        storyObj.userVote = vote ? vote.voteType : null;
+    }
+
+    return storyObj;
 };
 
 /**
  * Get story by share ID
  */
-exports.getStoryByShareId = async (shareId) => {
+exports.getStoryByShareId = async (shareId, currentUserId = null) => {
     const story = await Story.findOne({ shareId, isDeleted: false })
         .populate('author', 'username _id avatar');
 
@@ -91,7 +150,19 @@ exports.getStoryByShareId = async (shareId) => {
         throw new Error('Story not found');
     }
 
-    return story;
+    const storyObj = story.toObject();
+
+    // Mask author details if anonymous
+    if (storyObj.isAnonymous) {
+        storyObj.author = { _id: storyObj.author?._id, username: 'Anonymous' };
+    }
+
+    if (currentUserId) {
+        const vote = await Vote.findOne({ story: storyObj._id, user: currentUserId });
+        storyObj.userVote = vote ? vote.voteType : null;
+    }
+
+    return storyObj;
 };
 
 /**
