@@ -33,6 +33,9 @@ router.route('/:id/comments')
     .post(authenticate, validateComment, commentController.addComment)
     .get(optionalAuth, commentController.getComments);
 
+// Translation Route
+router.post('/translate', storyController.translateText);
+
 // Report Route
 const reportController = require('../../controllers/reportController');
 router.post('/:id/report', authenticate, reportController.createReport);

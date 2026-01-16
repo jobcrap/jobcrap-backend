@@ -6,10 +6,24 @@ const translationService = require('./translationService');
  * Create a new story
  */
 exports.createStory = async (storyData, userId) => {
-    // Detect original language if not provided
+    const originalText = storyData.text;
+    let text = originalText;
     let originalLanguage = storyData.originalLanguage;
-    if (!originalLanguage && storyData.text) {
-        originalLanguage = await translationService.detectLanguage(storyData.text);
+
+    // Detect language if not provided
+    if (!originalLanguage && originalText) {
+        originalLanguage = await translationService.detectLanguage(originalText);
+    }
+
+    // Translate to English if not already in English
+    if (originalLanguage && originalLanguage !== 'en') {
+        try {
+            text = await translationService.translateText(originalText, 'en');
+        } catch (error) {
+            console.error('Auto-translation failed:', error);
+            // Fallback: keep original text in BOTH fields or just leave as is
+            // We'll keep original as fallback for English field if translation fails
+        }
     }
 
     // Clean tags if any
@@ -20,6 +34,8 @@ exports.createStory = async (storyData, userId) => {
 
     const story = await Story.create({
         ...storyData,
+        text,
+        originalText,
         tags,
         originalLanguage: originalLanguage || 'en',
         author: userId

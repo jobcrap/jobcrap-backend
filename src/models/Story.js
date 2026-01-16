@@ -59,6 +59,10 @@ const storySchema = new mongoose.Schema({
         default: 0,
         min: 0
     },
+    originalText: {
+        type: String,
+        trim: true
+    },
     originalLanguage: {
         type: String,
         default: 'en'

@@ -174,3 +174,21 @@ exports.getMyStories = asyncHandler(async (req, res) => {
         }
     });
 });
+
+/**
+ * @desc    Translate story text to target language
+ * @route   POST /api/stories/translate
+ * @access  Public
+ */
+exports.translateText = asyncHandler(async (req, res) => {
+    const { text, targetLanguage } = req.body;
+
+    if (!text || !targetLanguage) {
+        return errorResponse(res, 'Text and target language are required', 400);
+    }
+
+    const translationService = require('../services/translationService');
+    const translated = await translationService.translateText(text, targetLanguage);
+
+    successResponse(res, { translated, targetLanguage });
+});
