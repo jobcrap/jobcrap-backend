@@ -55,9 +55,28 @@ const userSchema = new mongoose.Schema({
     providerId: {
         type: String,
         sparse: true
+    },
+    deletionScheduledAt: {
+        type: Date,
+        default: null
+    },
+    isDeletionPending: {
+        type: Boolean,
+        default: false
     }
 }, {
-    timestamps: true
+    timestamps: true,
+    toJSON: { virtuals: true },
+    toObject: { virtuals: true }
+});
+
+// Virtual for stories count
+userSchema.virtual('storiesCount', {
+    ref: 'Story',
+    localField: '_id',
+    foreignField: 'author',
+    count: true,
+    match: { isDeleted: false }
 });
 
 // Hash password before saving

@@ -14,5 +14,7 @@ router.post('/login', authLimiter, validateLogin, authController.login);
 router.get('/me', authenticate, authController.getMe);
 router.post('/sync', verifyFirebaseToken, authController.syncUser);
 router.put('/profile', authenticate, authController.updateProfile);
+router.delete('/delete-account', authenticate, authController.deleteAccount);
+router.post('/undo-delete', authenticate, authController.undoDeleteAccount);
 
 module.exports = router;

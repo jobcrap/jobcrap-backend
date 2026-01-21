@@ -1,6 +1,6 @@
 const storyService = require('../services/storyService');
 const voteService = require('../services/voteService');
-const Story = require('../models/Story');
+const { Story, Vote } = require('../models');
 const { successResponse, errorResponse } = require('../utils/responseHandler');
 const asyncHandler = require('../utils/asyncHandler');
 

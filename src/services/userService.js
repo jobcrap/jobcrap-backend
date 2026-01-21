@@ -1,4 +1,4 @@
-const { User } = require('../models')
+const { User, Story, Comment, Vote } = require('../models')
 const { AUTH_PROVIDERS } = require('../constants')
 
 /**
@@ -6,7 +6,7 @@ const { AUTH_PROVIDERS } = require('../constants')
  */
 exports.createUser = async (userData) => {
   const user = await User.create(userData)
-  return user
+  return await User.findById(user._id).populate('storiesCount')
 }
 
 /**
@@ -19,14 +19,14 @@ exports.authenticateUser = async (email, password) => {
     throw new Error('Invalid credentials')
   }
 
-  return user
+  return await User.findById(user._id).populate('storiesCount')
 }
 
 /**
  * Get user by ID
  */
 exports.getUserById = async (id) => {
-  const user = await User.findById(id)
+  const user = await User.findById(id).populate('storiesCount')
   if (!user) {
     throw new Error('User not found')
   }
@@ -134,7 +134,7 @@ exports.syncFirebaseUser = async (decodedToken) => {
         picture &&
         (!user.avatar ||
           user.avatar ===
-            'https://cdn-icons-png.flaticon.com/512/149/149071.png')
+          'https://cdn-icons-png.flaticon.com/512/149/149071.png')
       ) {
         user.avatar = picture
       }
@@ -142,7 +142,7 @@ exports.syncFirebaseUser = async (decodedToken) => {
       await user.save()
     }
 
-    return user
+    return await User.findById(user._id).populate('storiesCount')
   } catch (error) {
     console.error('Sync Error:', error.message)
     throw error
@@ -156,7 +156,7 @@ exports.updateUserProfile = async (userId, updates) => {
   const user = await User.findByIdAndUpdate(userId, updates, {
     new: true,
     runValidators: true,
-  })
+  }).populate('storiesCount')
   if (!user) {
     throw new Error('User not found')
   }
@@ -205,4 +205,106 @@ exports.fixInvalidAuthProviders = async () => {
   }
 
   return users.length
+}
+
+/**
+ * Schedule account deletion (30-day grace period)
+ */
+exports.scheduleAccountDeletion = async (userId) => {
+  const deletionDate = new Date()
+  deletionDate.setDate(deletionDate.getDate() + 30)
+
+  const user = await User.findByIdAndUpdate(
+    userId,
+    {
+      isDeletionPending: true,
+      deletionScheduledAt: deletionDate,
+    },
+    { new: true }
+  ).populate('storiesCount')
+
+  if (!user) {
+    throw new Error('User not found')
+  }
+
+  return user
+}
+
+/**
+ * Cancel account deletion
+ */
+exports.cancelAccountDeletion = async (userId) => {
+  const user = await User.findByIdAndUpdate(
+    userId,
+    {
+      isDeletionPending: false,
+      deletionScheduledAt: null,
+    },
+    { new: true }
+  ).populate('storiesCount')
+
+  if (!user) {
+    throw new Error('User not found')
+  }
+
+  return user
+}
+
+/**
+ * Permanently delete user and all associated data
+ */
+exports.deleteAccountPermanently = async (userId) => {
+  // 1. Find all stories by this user
+  const userStories = await Story.find({ author: userId });
+  const storyIds = userStories.map(s => s._id);
+
+  // 2. Delete all votes cast by user OR on user's stories
+  await Vote.deleteMany({
+    $or: [
+      { user: userId },
+      { story: { $in: storyIds } }
+    ]
+  });
+
+  // 3. Delete all comments authored by user OR on user's stories
+  await Comment.deleteMany({
+    $or: [
+      { author: userId },
+      { story: { $in: storyIds } }
+    ]
+  });
+
+  // 4. Delete all stories by user
+  await Story.deleteMany({ author: userId });
+
+  // 5. Delete the user account
+  const user = await User.findByIdAndDelete(userId);
+
+  return user;
+};
+
+/**
+ * Process all pending deletions that have reached their scheduled date
+ */
+exports.processPendingDeletions = async () => {
+  const now = new Date()
+  const usersToDelete = await User.find({
+    isDeletionPending: true,
+    deletionScheduledAt: { $lte: now },
+  })
+
+  if (usersToDelete.length > 0) {
+    console.log(`Processing permanent deletion for ${usersToDelete.length} users`)
+  }
+
+  for (const user of usersToDelete) {
+    try {
+      await this.deleteAccountPermanently(user._id)
+      console.log(`Permanently deleted user: ${user.email}`)
+    } catch (error) {
+      console.error(`Failed to delete user ${user.email}:`, error.message)
+    }
+  }
+
+  return usersToDelete.length
 }

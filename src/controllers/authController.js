@@ -24,13 +24,18 @@ exports.register = asyncHandler(async (req, res, next) => {
 
     const token = user.generateAuthToken();
 
+    const userObj = user.toObject({ virtuals: true });
     successResponse(res, {
         token,
         user: {
-            id: user._id,
-            email: user.email,
-            username: user.username,
-            role: user.role
+            id: userObj._id,
+            email: userObj.email,
+            username: userObj.username,
+            role: userObj.role,
+            authProvider: userObj.authProvider,
+            storiesCount: userObj.storiesCount || 0,
+            isDeletionPending: userObj.isDeletionPending || false,
+            deletionScheduledAt: userObj.deletionScheduledAt
         }
     }, 'User registered successfully', 201);
 });
@@ -51,18 +56,21 @@ exports.login = asyncHandler(async (req, res, next) => {
 
     const token = user.generateAuthToken();
 
+    const userObj = user.toObject({ virtuals: true });
     successResponse(res, {
         token,
         user: {
-            id: user._id,
-            email: user.email,
-            username: user.username,
-            role: user.role
+            id: userObj._id,
+            email: userObj.email,
+            username: userObj.username,
+            role: userObj.role,
+            authProvider: userObj.authProvider,
+            storiesCount: userObj.storiesCount || 0,
+            isDeletionPending: userObj.isDeletionPending || false,
+            deletionScheduledAt: userObj.deletionScheduledAt
         }
     }, 'Login successful');
 });
-
-// ...
 
 /**
  * @desc    Get current logged in user
@@ -72,13 +80,18 @@ exports.login = asyncHandler(async (req, res, next) => {
 exports.getMe = asyncHandler(async (req, res, next) => {
     const user = await userService.getUserById(req.user.id);
 
+    const userObj = user.toObject({ virtuals: true });
     successResponse(res, {
-        id: user._id,
-        email: user.email,
-        username: user.username,
-        avatar: user.avatar,
-        role: user.role,
-        createdAt: user.createdAt
+        id: userObj._id,
+        email: userObj.email,
+        username: userObj.username,
+        avatar: userObj.avatar,
+        role: userObj.role,
+        authProvider: userObj.authProvider,
+        storiesCount: userObj.storiesCount || 0,
+        isDeletionPending: userObj.isDeletionPending || false,
+        deletionScheduledAt: userObj.deletionScheduledAt,
+        createdAt: userObj.createdAt
     });
 });
 
@@ -95,12 +108,17 @@ exports.syncUser = asyncHandler(async (req, res) => {
         return errorResponse(res, 'Your account has been blocked', 403);
     }
 
+    const userObj = user.toObject({ virtuals: true });
     successResponse(res, {
-        id: user._id,
-        email: user.email,
-        username: user.username,
-        avatar: user.avatar,
-        role: user.role
+        id: userObj._id,
+        email: userObj.email,
+        username: userObj.username,
+        avatar: userObj.avatar,
+        role: userObj.role,
+        authProvider: userObj.authProvider,
+        storiesCount: userObj.storiesCount || 0,
+        isDeletionPending: userObj.isDeletionPending || false,
+        deletionScheduledAt: userObj.deletionScheduledAt
     }, 'User synced successfully');
 });
 
@@ -117,11 +135,60 @@ exports.updateProfile = asyncHandler(async (req, res) => {
         avatar
     });
 
+    const userObj = updatedUser.toObject({ virtuals: true });
     successResponse(res, {
-        id: updatedUser._id,
-        email: updatedUser.email,
-        username: updatedUser.username,
-        avatar: updatedUser.avatar,
-        role: updatedUser.role
+        id: userObj._id,
+        email: userObj.email,
+        username: userObj.username,
+        avatar: userObj.avatar,
+        role: userObj.role,
+        authProvider: userObj.authProvider,
+        storiesCount: userObj.storiesCount || 0,
+        isDeletionPending: userObj.isDeletionPending || false,
+        deletionScheduledAt: userObj.deletionScheduledAt
     }, 'Profile updated successfully');
+});
+
+/**
+ * @desc    Schedule account deletion
+ * @route   DELETE /api/auth/delete-account
+ * @access  Private
+ */
+exports.deleteAccount = asyncHandler(async (req, res) => {
+    const user = await userService.scheduleAccountDeletion(req.user.id);
+
+    const userObj = user.toObject({ virtuals: true });
+    successResponse(res, {
+        id: userObj._id,
+        email: userObj.email,
+        username: userObj.username,
+        avatar: userObj.avatar,
+        role: userObj.role,
+        authProvider: userObj.authProvider,
+        storiesCount: userObj.storiesCount || 0,
+        isDeletionPending: userObj.isDeletionPending || false,
+        deletionScheduledAt: userObj.deletionScheduledAt
+    }, 'Account deletion scheduled for 30 days from now');
+});
+
+/**
+ * @desc    Cancel account deletion
+ * @route   POST /api/auth/undo-delete
+ * @access  Private
+ */
+exports.undoDeleteAccount = asyncHandler(async (req, res) => {
+    const user = await userService.cancelAccountDeletion(req.user.id);
+
+    const userObj = user.toObject({ virtuals: true });
+    successResponse(res, {
+        id: userObj._id,
+        email: userObj.email,
+        username: userObj.username,
+        avatar: userObj.avatar,
+        role: userObj.role,
+        authProvider: userObj.authProvider,
+        storiesCount: userObj.storiesCount || 0,
+        isDeletionPending: userObj.isDeletionPending || false,
+        deletionScheduledAt: userObj.deletionScheduledAt
+    }, 'Account deletion cancelled successfully');
 });

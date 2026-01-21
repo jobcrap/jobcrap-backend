@@ -5,6 +5,7 @@ const morgan = require('morgan');
 const config = require('./config');
 const connectDB = require('./config/database');
 const routes = require('./routes');
+const userService = require('./services/userService');
 const { errorHandler, notFound } = require('./middleware/errorMiddleware');
 const { apiLimiter } = require('./middleware/rateLimitMiddleware');
 
@@ -73,6 +74,16 @@ app.use(errorHandler);
 // Start Server
 const server = app.listen(config.port, () => {
     console.log(`🚀 Server running in ${config.nodeEnv} mode on port ${config.port}`);
+
+    // Process pending account deletions every 24 hours
+    // This will permanently delete accounts that have passed their 30-day grace period
+    setInterval(async () => {
+        try {
+            await userService.processPendingDeletions();
+        } catch (error) {
+            console.error('Error processing pending deletions:', error);
+        }
+    }, 24 * 60 * 60 * 1000);
 });
 
 // Handle unhandled promise rejections
