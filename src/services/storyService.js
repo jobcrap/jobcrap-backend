@@ -140,19 +140,12 @@ exports.getStoryById = async (id, currentUserId = null) => {
         throw new Error('Story not found');
     }
 
-    const storyObj = story.toObject();
-
-    // Mask author details if anonymous
-    if (storyObj.isAnonymous) {
-        storyObj.author = { _id: storyObj.author?._id, username: 'Anonymous' };
-    }
-
     if (currentUserId) {
         const vote = await Vote.findOne({ story: id, user: currentUserId });
-        storyObj.userVote = vote ? vote.voteType : null;
+        story.userVote = vote ? vote.voteType : null;
     }
 
-    return storyObj;
+    return story;
 };
 
 /**

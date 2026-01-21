@@ -84,10 +84,14 @@ exports.deleteStory = asyncHandler(async (req, res) => {
  * @access  Private (Owner only)
  */
 exports.updateStory = asyncHandler(async (req, res) => {
-    const story = await storyService.getStoryById(req.params.id);
+    const story = await Story.findById(req.params.id);
+
+    if (!story) {
+        return errorResponse(res, 'Story not found', 404);
+    }
 
     // Check ownership
-    if (story.author._id.toString() !== req.user.id) {
+    if (story.author.toString() !== req.user.id) {
         return errorResponse(res, 'Not authorized to update this story', 403);
     }
 
@@ -110,10 +114,10 @@ exports.updateStory = asyncHandler(async (req, res) => {
     }
 
     // Update the story
-    Object.assign(story, updates);
+    story.set(updates);
     await story.save();
 
-    const storyObj = story.toObject();
+    let storyObj = story.toObject();
     if (storyObj.isAnonymous) {
         storyObj.author = { _id: storyObj.author?._id, username: 'Anonymous' };
     }
