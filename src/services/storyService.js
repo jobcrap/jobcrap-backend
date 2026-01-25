@@ -10,19 +10,29 @@ exports.createStory = async (storyData, userId) => {
     let text = originalText;
     let originalLanguage = storyData.originalLanguage;
 
-    // Detect language if not provided
-    if (!originalLanguage && originalText) {
-        originalLanguage = await translationService.detectLanguage(originalText);
-    }
+    // Detect and translate if needed
+    if (originalText) {
+        if (!originalLanguage) {
+            // No language provided, use translateText to both detect and translate to English
+            try {
+                const result = await translationService.translateText(originalText, 'en');
+                text = result.translation;
+                originalLanguage = result.detectedSourceLanguage || 'en';
 
-    // Translate to English if not already in English
-    if (originalLanguage && originalLanguage !== 'en') {
-        try {
-            text = await translationService.translateText(originalText, 'en');
-        } catch (error) {
-            console.error('Auto-translation failed:', error);
-            // Fallback: keep original text in BOTH fields or just leave as is
-            // We'll keep original as fallback for English field if translation fails
+                // If the detected language IS English, the translation result is same as original
+                // We don't need to do anything special here as text is already updated
+            } catch (error) {
+                console.error('Auto-detection/translation failed:', error);
+                originalLanguage = 'en'; // Fallback
+            }
+        } else if (originalLanguage !== 'en') {
+            // Language provided and it's not English, so translate
+            try {
+                const result = await translationService.translateText(originalText, 'en');
+                text = result.translation;
+            } catch (error) {
+                console.error('Auto-translation failed:', error);
+            }
         }
     }
 
@@ -30,6 +40,8 @@ exports.createStory = async (storyData, userId) => {
     let tags = storyData.tags || [];
     if (typeof tags === 'string') {
         tags = tags.split(',').map(tag => tag.trim()).filter(tag => tag.length > 0);
+    } else if (Array.isArray(tags)) {
+        tags = tags.map(tag => (typeof tag === 'string' ? tag.trim() : tag)).filter(tag => !!tag);
     }
 
     const story = await Story.create({

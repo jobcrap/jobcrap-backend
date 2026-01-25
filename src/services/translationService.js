@@ -40,16 +40,31 @@ exports.detectLanguage = async (text) => {
 exports.translateText = async (text, targetLang) => {
     if (!translateClient) {
         // Fallback/Mock for when API key is not set
-        // In production, this should likely throw an error or handle gracefully
         console.warn('Google Translate API key not configured. Returning original text with prefix.');
-        return `[${targetLang}] ${text}`;
+        return {
+            translation: `[${targetLang}] ${text}`,
+            detectedSourceLanguage: 'en'
+        };
     }
 
     try {
-        const [translation] = await translateClient.translate(text, targetLang);
-        return translation;
+        const [translation, metadata] = await translateClient.translate(text, targetLang);
+
+        let detectedSourceLanguage = 'en'; // Default fallback
+
+        if (metadata && metadata.data && metadata.data.translations && metadata.data.translations[0]) {
+            detectedSourceLanguage = metadata.data.translations[0].detectedSourceLanguage;
+        } else if (metadata && metadata.detectedSourceLanguage) {
+            detectedSourceLanguage = metadata.detectedSourceLanguage;
+        }
+
+        return {
+            translation,
+            detectedSourceLanguage
+        };
     } catch (error) {
         console.error('Translation error:', error);
+        // If translation fails, we still want to return something or throw handled error
         throw new Error('Failed to translate text');
     }
 };

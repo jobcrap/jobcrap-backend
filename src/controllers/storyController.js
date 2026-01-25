@@ -96,7 +96,7 @@ exports.updateStory = asyncHandler(async (req, res) => {
     }
 
     // Only allow updating certain fields
-    const allowedUpdates = ['profession', 'country', 'category', 'text', 'triggerWarnings', 'isAnonymous'];
+    const allowedUpdates = ['profession', 'country', 'category', 'text', 'triggerWarnings', 'isAnonymous', 'tags'];
     const updates = {};
 
     allowedUpdates.forEach(field => {
@@ -192,7 +192,7 @@ exports.translateText = asyncHandler(async (req, res) => {
     }
 
     const translationService = require('../services/translationService');
-    const translated = await translationService.translateText(text, targetLanguage);
+    const result = await translationService.translateText(text, targetLanguage);
 
-    successResponse(res, { translated, targetLanguage });
+    successResponse(res, { translated: result.translation, targetLanguage });
 });

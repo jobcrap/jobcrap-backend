@@ -14,11 +14,11 @@ exports.translateText = asyncHandler(async (req, res) => {
         throw new Error('Text and targetLang are required');
     }
 
-    const translatedText = await translationService.translateText(text, targetLang);
+    const result = await translationService.translateText(text, targetLang);
 
     successResponse(res, {
         original: text,
-        translated: translatedText,
+        translated: result.translation,
         targetLang
     });
 });
