@@ -63,13 +63,13 @@ exports.validateStory = [
         .isLength({ min: LIMITS.STORY_TEXT_MIN, max: LIMITS.STORY_TEXT_MAX })
         .withMessage(`Story must be between ${LIMITS.STORY_TEXT_MIN} and ${LIMITS.STORY_TEXT_MAX} characters`)
         .custom((text) => {
-            const sentenceCount = text.split(/[.!?]+/).filter(sentence => sentence.trim().length > 0).length;
-            if (sentenceCount > LIMITS.STORY_SENTENCES_MAX) {
-                throw new Error(`Story cannot exceed ${LIMITS.STORY_SENTENCES_MAX} sentences (found ${sentenceCount})`);
+            const wordCount = text.trim().split(/\s+/).filter(word => word.length > 0).length;
+            if (wordCount > 700) {
+                throw new Error(`Your story is too long. Please keep it under 700 words (found ${wordCount})`);
             }
             return true;
         }),
-    body('triggerWarning')
+    body('triggerWarnings')
         .optional()
         .isArray()
         .withMessage('Trigger warnings must be an array')
