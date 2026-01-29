@@ -1,6 +1,6 @@
 const mongoose = require('mongoose');
 const dotenv = require('dotenv');
-const { User, Story, Comment, Vote } = require('../models');
+const { User, Story, Comment, Vote, SystemSetting } = require('../models');
 const config = require('../config');
 
 // Load environment variables
@@ -25,6 +25,7 @@ const importData = async () => {
         await Story.deleteMany();
         await Comment.deleteMany();
         await Vote.deleteMany();
+        await SystemSetting.deleteMany();
 
         console.log('Data Cleared...');
 
@@ -87,6 +88,27 @@ const importData = async () => {
 
         console.log('Stories Created...');
 
+        // Create System Settings (Policies)
+        await SystemSetting.create([
+            {
+                key: 'privacy_policy',
+                value: `Jobcrap respects your privacy. [Default Privacy Policy Content]`,
+                description: 'The platform privacy policy'
+            },
+            {
+                key: 'terms_of_service',
+                value: `Jobcrap Terms of Service. [Default Terms Content]`,
+                description: 'The platform terms of service'
+            },
+            {
+                key: 'csae_policy',
+                value: `Zero Tolerance Policy\nJobCrap maintains a zero-tolerance policy for Child Sexual Abuse and Exploitation (CSAE). We prohibit any content or behavior that sexually exploits, abuses, or endangers children.\n\nWhat is CSAE?\nCSAE refers to child sexual abuse and exploitation, including content or behavior that sexually exploits, abuses, or endangers children. This includes, for example:\nGrooming a child for sexual exploitation\nSextorting a child\nTrafficking of a child for sex\nOtherwise sexually exploiting a child\nCreating, sharing, or distributing child sexual abuse material (CSAM)\nSoliciting sexual content from minors\nEngaging in sexual conversations with minors\nAny attempt to contact minors for sexual purposes... [Seeded Version]`,
+                description: 'Child Sexual Abuse and Exploitation (CSAE) Policy'
+            }
+        ]);
+
+        console.log('System Settings Created...');
+
         process.exit();
     } catch (err) {
         console.error(err);
@@ -101,6 +123,7 @@ const deleteData = async () => {
         await Story.deleteMany();
         await Comment.deleteMany();
         await Vote.deleteMany();
+        await SystemSetting.deleteMany();
         console.log('Data Destroyed...');
         process.exit();
     } catch (err) {

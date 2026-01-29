@@ -4,11 +4,13 @@ const Story = require('./Story');
 const Comment = require('./Comment');
 const Vote = require('./Vote');
 const Report = require('./Report');
+const SystemSetting = require('./SystemSetting');
 
 module.exports = {
     User,
     Story,
     Comment,
     Vote,
-    Report
+    Report,
+    SystemSetting
 };
