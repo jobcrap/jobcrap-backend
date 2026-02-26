@@ -63,7 +63,11 @@ const userSchema = new mongoose.Schema({
     isDeletionPending: {
         type: Boolean,
         default: false
-    }
+    },
+    blockedUsers: [{
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'User'
+    }]
 }, {
     timestamps: true,
     toJSON: { virtuals: true },

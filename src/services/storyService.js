@@ -68,6 +68,14 @@ exports.getStories = async (filters, page, limit, sort = '-createdAt', currentUs
         ...(filters.tag && { tags: filters.tag }), // Filter by tag
     };
 
+    // Exclude posts from blocked users
+    if (currentUserId) {
+        const currentUser = await User.findById(currentUserId).select('blockedUsers');
+        if (currentUser?.blockedUsers?.length > 0) {
+            query.author = { ...query.author, $nin: currentUser.blockedUsers };
+        }
+    }
+
     // Simplified Search Logic (Text and Tags only)
     if (filters.search) {
         const searchRegex = { $regex: filters.search, $options: 'i' };

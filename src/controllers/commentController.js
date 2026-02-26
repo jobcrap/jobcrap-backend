@@ -1,4 +1,4 @@
-const { Comment, Story, Vote } = require('../models');
+const { Comment, Story, Vote, User } = require('../models');
 const { successResponse, errorResponse } = require('../utils/responseHandler');
 const asyncHandler = require('../utils/asyncHandler');
 const { getPaginationData } = require('../utils/pagination');
@@ -41,7 +41,17 @@ exports.getComments = asyncHandler(async (req, res) => {
     const userId = req.user?._id;
 
     const total = await Comment.countDocuments({ story: storyId });
-    let comments = await Comment.find({ story: storyId })
+
+    // Build comment query with blocked user filtering
+    const commentQuery = { story: storyId };
+    if (userId) {
+        const currentUser = await User.findById(userId).select('blockedUsers');
+        if (currentUser?.blockedUsers?.length > 0) {
+            commentQuery.author = { $nin: currentUser.blockedUsers };
+        }
+    }
+
+    let comments = await Comment.find(commentQuery)
         .sort({ upvotes: -1, createdAt: -1 })
         .skip(((page || 1) - 1) * (limit || 20))
         .limit(parseInt(limit || 20))
